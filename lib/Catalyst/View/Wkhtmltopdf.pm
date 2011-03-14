@@ -120,3 +120,109 @@ sub process {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to PDF using wkhtmltopdf
+
+=head1 SYNOPSIS
+
+  # lib/MyApp/View/Wkhtmltopdf.pm
+  package MyApp::View::JSON;
+  use Moose;
+  extends qw/Catalyst::View::Wkhtmltopdf/;
+  __PACKAGE__->meta->make_immutable();
+  1;
+
+  # configure in lib/MyApp.pm
+  MyApp->config({
+      ...
+      'View::Wkhtmltopdf' => {
+          allow_callback  => 1,    # defaults to 0
+          callback_param  => 'cb', # defaults to 'callback'
+          expose_stash    => [ qw(foo bar) ], # defaults to everything
+      },
+  });
+
+  sub hello : Local {
+      my($self, $c) = @_;
+      $c->stash->{wkhtmltopdf} = {
+      };
+      $c->forward('View::Wkhtmltopdf');
+  }
+
+=head1 DESCRIPTION
+
+Catalyst::View::Wkhtmltopdf is a Catalyst View handler that converts
+HTML data to PDF using wkhtmltopdf (which must be installed on your
+system). It can also handle direct conversion of TT templates (via
+L<Catalyst::View::TT>).
+
+=head1 CONFIG VARIABLES
+
+=over 4
+
+=item stash_key
+
+The stash key which contains data and optional runtime configuration
+to pass to the view. Default is I<wkhtmltopdf>.
+
+=item tmpdir
+
+Name of URI parameter to specify JSON callback function name. Defaults
+to C<callback>. Only effective when C<allow_callback> is turned on.
+
+=item command
+
+The full path and filename to the wkhtmltopdf command. Defaults to
+I</usr/bin/wkhtmltopdf>.
+
+=item disposition
+
+=item filename
+
+=item page_size
+
+Page size option (default: I<a4>).
+See wkhtmltopdf documentation for more information.
+
+=item allows
+
+An arrayref of allowed paths where wkhtmltopdf can find images and
+other linked content. The temporary directory is added by default.
+See wkhtmltopdf documentation for more information.
+
+=back
+
+=head1 PARAMETERS
+
+Parameters are passed from the controller as:
+
+  ...
+  
+Some of the configuration options can also be passed here: ...
+
+=head1 ENCODINGS
+
+At present time this library just uses UTF-8, which means it should
+work in most circumstances. Patches are welcome for support of
+different character sets.
+
+=head1 AUTHOR
+
+Michele Beltrame E<lt>mb@italpro.netE<gt>
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<Catalyst>, L<Catalyst::View::TT>
+
+L<http://code.google.com/p/wkhtmltopdf/>
+
+=cut
