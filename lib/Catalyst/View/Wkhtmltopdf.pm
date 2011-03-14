@@ -93,10 +93,10 @@ sub process {
     for my $allow (@{ $self->allows }) {
         $hcmd .= '--allow ' . $allow . ' ';
     }
-    $hcmd .= "--margin-top $wk->{top_margin}mm " if exists $wk->{top_margin};
-    $hcmd .= "--margin-left $wk->{left_margin}mm " if exists $wk->{left_margin};
-    $hcmd .= "--margin-bottom $wk->{bottom_margin}mm " if exists $wk->{bottom_margin};
-    $hcmd .= "--margin-right $wk->{right_margin}mm " if exists $wk->{right_margin};
+    $hcmd .= "--margin-top $wk->{margin_top} " if exists $wk->{margin_top};
+    $hcmd .= "--margin-left $wk->{margin_left} " if exists $wk->{margin_left};
+    $hcmd .= "--margin-bottom $wk->{margin_bottom} " if exists $wk->{margin_bottom};
+    $hcmd .= "--margin-right $wk->{margin_right} " if exists $wk->{margin_right};
     $hcmd .= " $htmlfn $pdffn";
 
     # Create the PDF file
@@ -129,29 +129,45 @@ Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to P
 
 =head1 SYNOPSIS
 
-  # lib/MyApp/View/Wkhtmltopdf.pm
-  package MyApp::View::JSON;
-  use Moose;
-  extends qw/Catalyst::View::Wkhtmltopdf/;
-  __PACKAGE__->meta->make_immutable();
-  1;
-
-  # configure in lib/MyApp.pm
-  MyApp->config({
+    # lib/MyApp/View/Wkhtmltopdf.pm
+    package MyApp::View::JSON;
+    use Moose;
+    extends qw/Catalyst::View::Wkhtmltopdf/;
+    __PACKAGE__->meta->make_immutable();
+    1;
+    
+    # configure in lib/MyApp.pm
+    MyApp->config({
       ...
       'View::Wkhtmltopdf' => {
-          allow_callback  => 1,    # defaults to 0
-          callback_param  => 'cb', # defaults to 'callback'
-          expose_stash    => [ qw(foo bar) ], # defaults to everything
+          command   => '/usr/local/bin/wkhtmltopdf',
+          tmpdir    => '/usr/tmp',
       },
-  });
+    });
+    
+    sub ciao : Local {
+        my($self, $c) = @_;
+        
+        # Pass some HTML...
+        $c->stash->{wkhtmltopdf} = {
+            html    => $web_page,
+        };
+        
+        # ..or a TT template
+        $c->stash->{wkhtmltopdf} = {
+            template    => 'hello.tt',
+            page_size   => 'a5',
+        };
 
-  sub hello : Local {
-      my($self, $c) = @_;
-      $c->stash->{wkhtmltopdf} = {
-      };
-      $c->forward('View::Wkhtmltopdf');
-  }
+        # More parameters...
+        $c->stash->{wkhtmltopdf} = {
+            html        => $web_page,
+            disposition => 'attachment',
+            filename    => 'mydocument.pdf',
+        };
+        
+        $c->forward('View::Wkhtmltopdf');
+    }
 
 =head1 DESCRIPTION
 
@@ -179,36 +195,83 @@ to C<callback>. Only effective when C<allow_callback> is turned on.
 The full path and filename to the wkhtmltopdf command. Defaults to
 I</usr/bin/wkhtmltopdf>.
 
-=item disposition
-
-=item filename
-
-=item page_size
-
-Page size option (default: I<a4>).
-See wkhtmltopdf documentation for more information.
-
 =item allows
 
 An arrayref of allowed paths where wkhtmltopdf can find images and
 other linked content. The temporary directory is added by default.
 See wkhtmltopdf documentation for more information.
 
+=item disposition
+
+The I<content-disposition> to set when sending the PDF file to the
+client. Can be either I<inline> or (default) I<attachment>.
+
+=item filename
+
+The filename to send to the client. Default is I<output.pdf>.
+
+=item page_size
+
+Page size option (default: I<a4>).
+See wkhtmltopdf documentation for more information.
+
 =back
 
 =head1 PARAMETERS
 
-Parameters are passed from the controller as:
+Parameters are passed fvia the stash:
 
-  ...
-  
-Some of the configuration options can also be passed here: ...
+    $c->stash->{wkhtmltopdf} = {
+        html    => $web_page,
+    };
 
-=head1 ENCODINGS
+You can pass the following configuration options here, which will
+override the global configuration: I<disposition>, I<filename>,
+I<page_size>.
+
+Other options currently supported are:
+
+=over 4
+
+=item page-width, page-height
+
+Width and height of the page, overrides I<page_size>.
+
+=item margin-top, margin-right, margin-bottom, margin-left
+
+Margins, specified as I<3mm>, I<0.7in>, ...
+
+=back
+
+Have a look at I<wkhtmltopdf> documentation for more information
+regarding these options.
+
+=head1 CHARACTER ENCODING
 
 At present time this library just uses UTF-8, which means it should
 work in most circumstances. Patches are welcome for support of
 different character sets.
+
+=head1 REQUIREMENTS
+
+I<wkhtmltopdf> command should be available on your system.
+
+=head1 TODO
+
+More configuration options (all the ones which I<wkhtmltopdf>
+supports, likely) should be added. Also, we'll wanto to allow
+to override them all at runtime.
+
+We might want to use pipes (L<IPC::Open2>) instead of relying
+on temp files.
+
+And yes... we need to write tests!
+
+=head1 CONTRIBUTE
+
+Project in on GitHub:
+
+L<https://github.com/lordarthas/Catalyst-View-Wkhtmltopdf>
 
 =head1 AUTHOR
 
