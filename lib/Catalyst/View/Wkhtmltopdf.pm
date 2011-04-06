@@ -3,7 +3,7 @@ use Moose;
 
 extends 'Catalyst::View';
 
-our $VERSION = '0.00001';
+our $VERSION = '0.0002';
 $VERSION = eval $VERSION;
 
 use File::Temp;
@@ -130,7 +130,7 @@ Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to P
 =head1 SYNOPSIS
 
     # lib/MyApp/View/Wkhtmltopdf.pm
-    package MyApp::View::JSON;
+    package MyApp::View::Wkhtmltopdf;
     use Moose;
     extends qw/Catalyst::View::Wkhtmltopdf/;
     __PACKAGE__->meta->make_immutable();
