@@ -3,7 +3,7 @@ use Moose;
 
 extends 'Catalyst::View';
 
-our $VERSION = '0.0002';
+our $VERSION = '0.0003';
 $VERSION = eval $VERSION;
 
 use File::Temp;
@@ -66,7 +66,7 @@ sub process {
     die 'Void-input' if !defined $html;
 
     # Usual page size A4, but labels would need a smaller one so we leave it
-    my $page_size = '--page-size ' . ($wk->{page_size} // $self->page_size);
+    my $page_size = '--page-size ' . ($wk->{page_size} || $self->page_size);
     
     # Custom page size will override the previous
     if ( defined $wk->{page_width} && defined $wk->{page_height} ) {
