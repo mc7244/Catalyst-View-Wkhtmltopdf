@@ -33,6 +33,14 @@ has 'page_size' => (
     lazy    => 1,
     default => sub { 'a4' }
 );
+
+has 'orientation' => (
+    is      => 'rw',
+    isa     => 'Str',
+    lazy    => 1,
+    default => sub { 'Portrait' }
+);
+
 has 'disposition' => (
     is      => 'rw',
     isa     => 'Str',
@@ -53,68 +61,73 @@ has 'allows' => (
 );
 
 sub process {
-    my($self, $c) = @_;
+    my ( $self, $c ) = @_;
 
-	my $wk = $c->stash->{$self->stash_key};
-        
+    my $wk = $c->stash->{ $self->stash_key };
+
     my $html;
     if ( exists $wk->{template} ) {
-        $html = $c->view('TT')->render($c, 'articles/export_pdf.tt');
+        $html = $c->view('TT')->render( $c, $wk->{template} ) or die;
     } else {
         $html = $wk->{html};
     }
     die 'Void-input' if !defined $html;
 
     # Usual page size A4, but labels would need a smaller one so we leave it
-    my $page_size = '--page-size ' . ($wk->{page_size} || $self->page_size);
-    
+    my $page_size = '--page-size ' . ( $wk->{page_size} || $self->page_size );
+
+    # Page Orientation
+    my $orientation = '--orientation ' . ( $wk->{orientation} || $self->orientation );
+
     # Custom page size will override the previous
     if ( defined $wk->{page_width} && defined $wk->{page_height} ) {
         $page_size = "--page-width $wk->{page_width} --page-height $wk->{page_height} ";
     }
-   
+
     # Create a temporary file
     use File::Temp;
     my $htmlf = File::Temp->new(
-        DIR     => $self->tmpdir,
-        SUFFIX  => '.html',
+        DIR    => $self->tmpdir,
+        SUFFIX => '.html',
+
         #UNLINK  => 0, # For testing
     );
     binmode $htmlf, ':utf8';
-    my $htmlfn = $htmlf->filename; 
-    my $pdffn = $htmlfn;
-    $pdffn =~ s/\.html/.pdf/; 
+    my $htmlfn = $htmlf->filename;
+    my $pdffn  = $htmlfn;
+    $pdffn =~ s/\.html/.pdf/;
 
     print $htmlf $html;
-            
-    # Build htmldoc command line
-    my $hcmd = $self->command . ' ' . $page_size. ' ';
+
+    # Build wkhtmltopdf command line
+    my $hcmd = $self->command . ' ' . $page_size . ' ' . $orientation . " ";
     $hcmd .= "--allow " . $self->tmpdir . " ";
-    for my $allow (@{ $self->allows }) {
+
+    for my $allow ( @{ $self->allows } ) {
         $hcmd .= '--allow ' . $allow . ' ';
     }
-    $hcmd .= "--margin-top $wk->{margin_top} " if exists $wk->{margin_top};
-    $hcmd .= "--margin-left $wk->{margin_left} " if exists $wk->{margin_left};
+    $hcmd .= "--margin-top $wk->{margin_top} "       if exists $wk->{margin_top};
+    $hcmd .= "--margin-left $wk->{margin_left} "     if exists $wk->{margin_left};
     $hcmd .= "--margin-bottom $wk->{margin_bottom} " if exists $wk->{margin_bottom};
-    $hcmd .= "--margin-right $wk->{margin_right} " if exists $wk->{margin_right};
+    $hcmd .= "--margin-right $wk->{margin_right} "   if exists $wk->{margin_right};
     $hcmd .= " $htmlfn $pdffn";
 
     # Create the PDF file
     my $output = `$hcmd`;
     die "$! [likely can't find wkhtmltopdf command!]" if $output;
-    
+
     # Read the output and return it
-    my $pdffc = Path::Class::File->new($pdffn);
+    my $pdffc      = Path::Class::File->new($pdffn);
     my $pdfcontent = $pdffc->slurp();
     $pdffc->remove();
-        
+
     my $disposition = $wk->{disposition} || $self->disposition;
-    my $filename = uri_escape_utf8($wk->{filename} || $self->filename);
+    my $filename = uri_escape_utf8( $wk->{filename} || $self->filename );
     $c->res->header(
         'Content-Disposition' => "$disposition; filename*=UTF-8''$filename",
         'Content-type'        => 'application/pdf',
     );
-    $c->res->body( $pdfcontent );
+    $c->res->body($pdfcontent);
 }
 
 __PACKAGE__->meta->make_immutable();
@@ -213,6 +226,11 @@ The filename to send to the client. Default is I<output.pdf>.
 =item page_size
 
 Page size option (default: I<a4>).
+See wkhtmltopdf documentation for more information.
+
+=item orientation
+
+Orientation option (default: I<Portrait>).
 See wkhtmltopdf documentation for more information.
 
 =back
