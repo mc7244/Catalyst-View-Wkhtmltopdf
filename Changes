@@ -1,5 +1,9 @@
 Revision history for Perl extension Catalyst::View::Wkhtmltopdf.
 
+0.0004
+    - Fixed bug if passing a TT template (jegade)
+    - Add "orientation" option (jegade)
+
 0.0003
     - Changed a // to || so now the lib works on perl 5.8.x as well
 

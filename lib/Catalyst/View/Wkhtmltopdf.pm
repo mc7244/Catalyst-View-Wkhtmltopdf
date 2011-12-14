@@ -3,7 +3,7 @@ use Moose;
 
 extends 'Catalyst::View';
 
-our $VERSION = '0.0003';
+our $VERSION = '0.0004';
 $VERSION = eval $VERSION;
 
 use File::Temp;
@@ -33,14 +33,12 @@ has 'page_size' => (
     lazy    => 1,
     default => sub { 'a4' }
 );
-
 has 'orientation' => (
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
     default => sub { 'Portrait' }
 );
-
 has 'disposition' => (
     is      => 'rw',
     isa     => 'Str',
@@ -294,6 +292,10 @@ L<https://github.com/lordarthas/Catalyst-View-Wkhtmltopdf>
 =head1 AUTHOR
 
 Michele Beltrame E<lt>mb@italpro.netE<gt>
+
+=head1 CONTRIBUTORS
+
+jegade
 
 =head1 LICENSE
 
