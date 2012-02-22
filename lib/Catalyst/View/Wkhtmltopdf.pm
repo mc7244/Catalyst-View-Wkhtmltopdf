@@ -3,11 +3,13 @@ use Moose;
 
 extends 'Catalyst::View';
 
-our $VERSION = '0.0004';
-$VERSION = eval $VERSION;
+use version;
+our $VERSION = qv('0.5.0');
 
 use File::Temp;
 use URI::Escape;
+use Path::Class;
+use File::Spec;
 
 has 'stash_key' => (
     is      => 'rw',
@@ -19,13 +21,19 @@ has 'tmpdir' => (
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
-    default => sub { '/tmp' }
+    default => sub { File::Spec->tmpdir() }
 );
 has 'command' => (
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
     default => sub { '/usr/bin/wkhtmltopdf' }
+);
+has 'tt_view' => (
+    is      => 'rw',
+    isa     => 'Str',
+    lazy    => 1,
+    default => sub { 'TT' }
 );
 has 'page_size' => (
     is      => 'rw',
@@ -43,7 +51,7 @@ has 'disposition' => (
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
-    default => sub { 'application/pdf' }
+    default => sub { 'inline' }
 );
 has 'filename' => (
     is      => 'rw',
@@ -63,32 +71,49 @@ sub process {
 
     my $wk = $c->stash->{ $self->stash_key };
 
+    my $pdfcontent = $self->render($c, $wk);
+
+    my $disposition = $wk->{disposition} || $self->disposition;
+    my $filename = uri_escape_utf8( $wk->{filename} || $self->filename );
+    $c->res->header(
+        'Content-Disposition' => "$disposition; filename*=UTF-8''$filename",
+        'Content-type'        => 'application/pdf',
+    );
+    $c->res->body($pdfcontent);
+}
+
+sub render {
+    my ( $self, $c, $args ) = @_;
+    
+    # Arguments for TT view - if not defined those will be the stash
+    # as per C::V::TT documentation
+    if (!$args->{template_args}) { $args->{template_args} = undef }
+    
     my $html;
-    if ( exists $wk->{template} ) {
-        $html = $c->view('TT')->render( $c, $wk->{template} ) or die;
+    if ( defined $args->{template} ) {
+        $html = $c->view( $self->tt_view )->render( $c, $args->{template} ) or die;
     } else {
-        $html = $wk->{html};
+        $html = $args->{html};
     }
     die 'Void-input' if !defined $html;
 
     # Usual page size A4, but labels would need a smaller one so we leave it
-    my $page_size = '--page-size ' . ( $wk->{page_size} || $self->page_size );
+    my $page_size = '--page-size ' . ( $args->{page_size} || $self->page_size );
 
     # Page Orientation
-    my $orientation = '--orientation ' . ( $wk->{orientation} || $self->orientation );
+    my $orientation = '--orientation ' . ( $args->{orientation} || $self->orientation );
 
     # Custom page size will override the previous
-    if ( defined $wk->{page_width} && defined $wk->{page_height} ) {
-        $page_size = "--page-width $wk->{page_width} --page-height $wk->{page_height} ";
+    if ( defined $args->{page_width} && defined $args->{page_height} ) {
+        $page_size = "--page-width $args->{page_width} --page-height $args->{page_height} ";
     }
 
     # Create a temporary file
     use File::Temp;
     my $htmlf = File::Temp->new(
-        DIR    => $self->tmpdir,
-        SUFFIX => '.html',
-
-        #UNLINK  => 0, # For testing
+        DIR     => $self->tmpdir,
+        SUFFIX  => '.html',
+        UNLINK  => 1,
     );
     binmode $htmlf, ':utf8';
     my $htmlfn = $htmlf->filename;
@@ -104,10 +129,10 @@ sub process {
     for my $allow ( @{ $self->allows } ) {
         $hcmd .= '--allow ' . $allow . ' ';
     }
-    $hcmd .= "--margin-top $wk->{margin_top} "       if exists $wk->{margin_top};
-    $hcmd .= "--margin-left $wk->{margin_left} "     if exists $wk->{margin_left};
-    $hcmd .= "--margin-bottom $wk->{margin_bottom} " if exists $wk->{margin_bottom};
-    $hcmd .= "--margin-right $wk->{margin_right} "   if exists $wk->{margin_right};
+    $hcmd .= "--margin-top $args->{margin_top} "       if exists $args->{margin_top};
+    $hcmd .= "--margin-left $args->{margin_left} "     if exists $args->{margin_left};
+    $hcmd .= "--margin-bottom $args->{margin_bottom} " if exists $args->{margin_bottom};
+    $hcmd .= "--margin-right $args->{margin_right} "   if exists $args->{margin_right};
     $hcmd .= " $htmlfn $pdffn";
 
     # Create the PDF file
@@ -118,14 +143,8 @@ sub process {
     my $pdffc      = Path::Class::File->new($pdffn);
     my $pdfcontent = $pdffc->slurp();
     $pdffc->remove();
-
-    my $disposition = $wk->{disposition} || $self->disposition;
-    my $filename = uri_escape_utf8( $wk->{filename} || $self->filename );
-    $c->res->header(
-        'Content-Disposition' => "$disposition; filename*=UTF-8''$filename",
-        'Content-type'        => 'application/pdf',
-    );
-    $c->res->body($pdfcontent);
+    
+    return $pdfcontent;
 }
 
 __PACKAGE__->meta->make_immutable();
@@ -152,7 +171,10 @@ Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to P
       ...
       'View::Wkhtmltopdf' => {
           command   => '/usr/local/bin/wkhtmltopdf',
+          # Guessed via File::Spec by default
           tmpdir    => '/usr/tmp',
+          # Name of the Template view, "TT" by default
+          tt_view   => 'Template',
       },
     });
     
@@ -189,6 +211,8 @@ L<Catalyst::View::TT>).
 
 =head1 CONFIG VARIABLES
 
+All configuration parameters are optional as they have a default.
+
 =over 4
 
 =item stash_key
@@ -198,15 +222,21 @@ to pass to the view. Default is I<wkhtmltopdf>.
 
 =item tmpdir
 
+Default: guessed via C<File::Spec::tmpdir()>.
+
 Name of URI parameter to specify JSON callback function name. Defaults
 to C<callback>. Only effective when C<allow_callback> is turned on.
 
 =item command
 
+Default: C</usr/bin/wkhtmltopdf>.
+
 The full path and filename to the wkhtmltopdf command. Defaults to
 I</usr/bin/wkhtmltopdf>.
 
 =item allows
+
+Default: the temporary directory.
 
 An arrayref of allowed paths where wkhtmltopdf can find images and
 other linked content. The temporary directory is added by default.
@@ -214,21 +244,29 @@ See wkhtmltopdf documentation for more information.
 
 =item disposition
 
+Default: I<inline>.
+
 The I<content-disposition> to set when sending the PDF file to the
 client. Can be either I<inline> or (default) I<attachment>.
 
 =item filename
 
-The filename to send to the client. Default is I<output.pdf>.
+Default: I<output.pdf>.
+
+The filename to send to the client.
 
 =item page_size
 
-Page size option (default: I<a4>).
+Default: I<A4>.
+
+Page size option.
 See wkhtmltopdf documentation for more information.
 
 =item orientation
 
-Orientation option (default: I<Portrait>).
+Default: I<portrait>.
+
+Orientation option.
 See wkhtmltopdf documentation for more information.
 
 =back
@@ -262,6 +300,38 @@ Margins, specified as I<3mm>, I<0.7in>, ...
 Have a look at I<wkhtmltopdf> documentation for more information
 regarding these options.
 
+=head1 METHODS
+
+=over 4
+
+=item process()
+
+Generated the PDF as epr parameters in $c->stash->{wkhtmltopdf} or other
+configured stash key. Calls C<render()> to perform actual rendering.
+Output is stored in C<$c->response->body>.
+
+It is possible to forward to the process method of the view from inside
+L<Catalyst>:
+
+    $c->forward('View::Wkhtmltopdf');
+
+However, this is usually done automatically by L<Catalyst::Action::RenderView>.
+
+=item render($c, \%args)
+
+Generates a PDF from the arguments in I<\%args> and returns it.
+Arguments are the same one would place in the stash key for
+rendering + output via C<process()>, but the following are
+(of course) ignored: I<disposition>, I<filename> (as they
+only apply when outputting the content to the client).
+
+You can pass a I<template_args> key inside the arguments
+hashref, which will be passed to L<Catalyst::View::TT>'s
+C<render()> method. If not supplied, undef will be passed,
+so the TT view method will behave as per its documentation.
+
+=back
+
 =head1 CHARACTER ENCODING
 
 At present time this library just uses UTF-8, which means it should
@@ -291,7 +361,7 @@ L<https://github.com/lordarthas/Catalyst-View-Wkhtmltopdf>
 
 =head1 AUTHOR
 
-Michele Beltrame E<lt>mb@italpro.netE<gt>
+Michele Beltrame E<lt>arthas@cpan.org<gt>
 
 =head1 CONTRIBUTORS
 
