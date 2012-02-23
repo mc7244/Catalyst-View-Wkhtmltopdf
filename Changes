@@ -1,5 +1,8 @@
 Revision history for Perl extension Catalyst::View::Wkhtmltopdf.
 
+0.5.1
+    - Typos
+
 0.5.0
     - Factored out rendering to render(), which can also be called
       directly to get PDF in a variable instead of outputting it

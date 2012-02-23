@@ -4,7 +4,7 @@ use Moose;
 extends 'Catalyst::View';
 
 use version;
-our $VERSION = qv('0.5.0');
+our $VERSION = qv('0.5.1');
 
 use File::Temp;
 use URI::Escape;
@@ -204,10 +204,10 @@ Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to P
 
 =head1 DESCRIPTION
 
-Catalyst::View::Wkhtmltopdf is a Catalyst View handler that converts
-HTML data to PDF using wkhtmltopdf (which must be installed on your
-system). It can also handle direct conversion of TT templates (via
-L<Catalyst::View::TT>).
+I<Catalyst::View::Wkhtmltopdf> is a L<Catalyst> view handler that
+converts HTML data to PDF using wkhtmltopdf (which must be installed
+on your system). It can also handle direct conversion of TT templates
+(via L<Catalyst::View::TT>).
 
 =head1 CONFIG VARIABLES
 
@@ -361,7 +361,7 @@ L<https://github.com/lordarthas/Catalyst-View-Wkhtmltopdf>
 
 =head1 AUTHOR
 
-Michele Beltrame E<lt>arthas@cpan.org<gt>
+Michele Beltrame E<lt>arthas@cpan.orgE<gt>
 
 =head1 CONTRIBUTORS
 
