@@ -4,7 +4,7 @@ use Moose;
 extends 'Catalyst::View';
 
 use version;
-our $VERSION = qv('0.5.1');
+our $VERSION = qv('0.5.2');
 
 use File::Temp;
 use URI::Escape;
@@ -182,18 +182,18 @@ Catalyst::View::Wkhtmltopdf - Catalyst view to convert HTML (or TT) content to P
         my($self, $c) = @_;
         
         # Pass some HTML...
-        $c->stash->{wkhtmltopdf} = {
+        $c->stash->{wk} = {
             html    => $web_page,
         };
         
         # ..or a TT template
-        $c->stash->{wkhtmltopdf} = {
+        $c->stash->{wk} = {
             template    => 'hello.tt',
             page_size   => 'a5',
         };
 
         # More parameters...
-        $c->stash->{wkhtmltopdf} = {
+        $c->stash->{wk} = {
             html        => $web_page,
             disposition => 'attachment',
             filename    => 'mydocument.pdf',
@@ -218,7 +218,7 @@ All configuration parameters are optional as they have a default.
 =item stash_key
 
 The stash key which contains data and optional runtime configuration
-to pass to the view. Default is I<wkhtmltopdf>.
+to pass to the view. Default is I<wk>.
 
 =item tmpdir
 

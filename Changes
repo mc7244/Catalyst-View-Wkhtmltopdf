@@ -1,5 +1,8 @@
 Revision history for Perl extension Catalyst::View::Wkhtmltopdf.
 
+0.5.2
+    - Fixed error in documentation (default stash key was wrong)
+
 0.5.1
     - Typos
 
