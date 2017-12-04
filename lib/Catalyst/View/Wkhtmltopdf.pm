@@ -139,6 +139,8 @@ sub render {
     my $output = `$hcmd`;
     die "$! [likely can't find wkhtmltopdf command!]" if $output;
 
+    die "Output file $pdffn not found" unless -e $pdffn;
+
     # Read the output and return it
     return IO::File::WithPath->new($pdffn);
 }
