@@ -8,8 +8,8 @@ our $VERSION = qv('0.5.2');
 
 use File::Temp;
 use URI::Escape;
-use Path::Class;
 use File::Spec;
+use IO::File::WithPath;
 
 has 'stash_key' => (
     is      => 'rw',
@@ -139,12 +139,10 @@ sub render {
     my $output = `$hcmd`;
     die "$! [likely can't find wkhtmltopdf command!]" if $output;
 
+    die "Output file $pdffn not found" unless -e $pdffn;
+
     # Read the output and return it
-    my $pdffc      = Path::Class::File->new($pdffn);
-    my $pdfcontent = $pdffc->slurp();
-    $pdffc->remove();
-    
-    return $pdfcontent;
+    return IO::File::WithPath->new($pdffn);
 }
 
 __PACKAGE__->meta->make_immutable();
